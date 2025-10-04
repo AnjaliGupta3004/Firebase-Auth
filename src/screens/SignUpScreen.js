@@ -30,7 +30,7 @@ const SignUpScreen = ({ navigation }) => {
     return unsubscribe;
   }, []);
 
-  //  Send OTP using Firebase
+  //  Send OTP using Firebase (testing-friendly)
   const handleSendOtp = async () => {
     if (!phone || phone.length !== 10) {
       setErrors({ phone: "Enter valid 10-digit mobile number" });
@@ -40,6 +40,16 @@ const SignUpScreen = ({ navigation }) => {
     try {
       setLoading(true);
       const fullPhone = "+91" + phone;
+
+      //  Check if this is a Firebase test number
+      if (fullPhone === "+91 9876543210") {
+        alert("Test OTP: 123456");
+        setConfirmation({ isTest: true });
+        setStep("otp");
+        setLoading(false);
+        return;
+      }
+
       const confirmationResult = await auth().signInWithPhoneNumber(fullPhone);
       setConfirmation(confirmationResult);
       setStep("otp");
@@ -47,28 +57,40 @@ const SignUpScreen = ({ navigation }) => {
     } catch (err) {
       console.error("Firebase OTP send error:", err);
       alert(
-        "Failed to send OTP. Please use a real device or a test number if using an emulator."
+        "Failed to send OTP. Use a test number if you're on an emulator or no billing is enabled."
       );
     } finally {
       setLoading(false);
     }
   };
 
-  //  Verify OTP using Firebase
+  //  Verify OTP using Firebase or test OTP
   const handleVerifyOtp = async () => {
     if (otpCode.length !== 6) {
       setErrors({ otpCode: "Enter valid 6-digit OTP" });
       return;
     }
+
     try {
       setLoading(true);
+
+      //  Handle Firebase test OTP
+      if (confirmation?.isTest) {
+        if (otpCode === "123456") {
+          alert("✅ Test login successful!");
+          navigation.replace("HomeScreen");
+          return;
+        } else {
+          alert(" Wrong test OTP.");
+          return;
+        }
+      }
+
       const userCredential = await confirmation.confirm(otpCode);
 
       if (userCredential.user) {
         console.log("Firebase User signed in:", userCredential.user.uid);
         alert("Sign in successful!");
-
-        // 🚀 Navigate directly (example)
         navigation.replace("HomeScreen");
       }
     } catch (err) {
